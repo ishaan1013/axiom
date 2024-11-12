@@ -78,11 +78,6 @@ function TabComponent({
         >
           <X className="size-3.5" />
         </div>
-      ) : tab.workspaceId ? (
-        <div className="relative size-5 p-1 flex items-center justify-center">
-          <div className="rounded-full size-2 absolute animate-ping bg-green-500 opacity-75" />
-          <div className="rounded-full size-2 bg-green-500" />
-        </div>
       ) : (
         <div className="size-5" />
       )}

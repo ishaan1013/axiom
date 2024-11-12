@@ -17,18 +17,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useUserInvites, useRespondToInvite, useWorkspaces } from "@/lib/query";
-import { toast } from "sonner";
-import { InviteWithWorkspace } from "@/lib/types";
-import { RotateCw } from "lucide-react";
-import { TooltipButton } from "../tooltip-button";
 
 type Category = "editor" | "shortcuts" | "invites";
 
 const categories = [
   { id: "editor" as const, label: "Code Editor", icon: FileCode2 },
   { id: "shortcuts" as const, label: "Shortcuts", icon: Keyboard },
-  { id: "invites" as const, label: "Invites", icon: Users },
 ];
 
 const shortcuts = [
@@ -42,13 +36,11 @@ const shortcuts = [
 export default function SettingsModal({
   open,
   setOpen,
-  userId,
   autoComplete,
   setAutoComplete,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  userId: string;
   autoComplete: boolean;
   setAutoComplete: (autoComplete: boolean) => void;
 }) {
@@ -57,14 +49,6 @@ export default function SettingsModal({
   useEffect(() => {
     if (!open) setActiveCategory("editor");
   }, [open]);
-
-  const { data: workspaces } = useWorkspaces(userId);
-  const {
-    data: invites,
-    refetch: refetchInvites,
-    isLoading: invitesLoading,
-  } = useUserInvites(userId);
-  const respondToInvite = useRespondToInvite();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -75,7 +59,6 @@ export default function SettingsModal({
               <Button
                 key={category.id}
                 onClick={() => {
-                  if (category.id === "invites") refetchInvites();
                   setActiveCategory(category.id);
                 }}
                 variant={activeCategory === category.id ? "secondary" : "ghost"}
@@ -91,17 +74,6 @@ export default function SettingsModal({
               <div className="font-semibold">
                 {categories.find((c) => c.id === activeCategory)?.label}
               </div>
-              {activeCategory === "invites" && (
-                <TooltipButton
-                  tooltip="Refetch invites"
-                  disabled={invites === undefined || invitesLoading}
-                  variant="ghost"
-                  size="xsIcon"
-                  onClick={() => refetchInvites()}
-                >
-                  <RotateCw className="!size-3.5" />
-                </TooltipButton>
-              )}
             </div>
             <div className="p-4 overflow-y-auto">
               {activeCategory === "editor" ? (
@@ -155,80 +127,6 @@ export default function SettingsModal({
                       </span>
                     </div>
                   ))}
-                </div>
-              ) : activeCategory === "invites" ? (
-                <div className="space-y-2">
-                  {!invites ? (
-                    <div className="text-sm text-muted-foreground flex items-center">
-                      <RotateCw className="animate-spin size-4 mr-2" />
-                      Loading...
-                    </div>
-                  ) : invites.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">
-                      No pending invites.
-                    </div>
-                  ) : (
-                    invites.map((invite: InviteWithWorkspace) => {
-                      const hasConflict = workspaces?.workspaces?.some(
-                        (w) =>
-                          w.project === invite.workspace.project &&
-                          !w.invites.some((i) => i.id === invite.id)
-                      );
-
-                      return (
-                        <div
-                          key={invite.id}
-                          className="border rounded-md p-3 space-y-2"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="font-medium">
-                                {invite.workspace.project}
-                              </div>
-                              <div className="text-muted-foreground text-xs w-full overflow-hidden text-ellipsis">
-                                {invite.workspace.users
-                                  .map((u) => u.id)
-                                  .join(", ")}
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                disabled={respondToInvite.isPending}
-                                onClick={() => {
-                                  if (hasConflict) {
-                                    toast.error(
-                                      "You already have a workspace with this project name"
-                                    );
-                                    return;
-                                  }
-                                  respondToInvite.mutate({
-                                    inviteId: invite.id,
-                                    accept: true,
-                                  });
-                                }}
-                              >
-                                Accept
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={respondToInvite.isPending}
-                                onClick={() =>
-                                  respondToInvite.mutate({
-                                    inviteId: invite.id,
-                                    accept: false,
-                                  })
-                                }
-                              >
-                                Decline
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
                 </div>
               ) : null}
             </div>
